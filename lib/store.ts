@@ -148,6 +148,17 @@ export const readRecipe = async (cmd: Command, arg: string | undefined): Promise
   };
 };
 
+/** The recipe taken from `url`, by its path, when there is one. */
+export const findBySource = async (cmd: Command, url: string): Promise<string | undefined> => {
+  const rows = await cmd.sys.vfs.query(cmd.access, {
+    types: [RECIPE_TYPE],
+    within: RECIPES_ROOT,
+    where: [{ ref: { path: ['source', 'url'] }, op: 'eq', value: url.trim() }],
+    limit: 1,
+  });
+  return rows[0]?.absPath;
+};
+
 /** Make a recipe of `fields`, named after its title, with a number after it when that is taken. */
 export const createRecipe = async (cmd: Command, fields: RecipeFields & { title: string }): Promise<Recipe> => {
   const attrs = attrsOf(fields);
@@ -220,6 +231,27 @@ export const coverRecipe = async (cmd: Command, path: string, picture?: string):
     if (!picture) return;
   }
   await setCover(cmd.sys.vfs, cmd.access, path, picture);
+};
+
+/**
+ * Write `bytes` as the recipe's picture `name`, a number put before its extension when the name is
+ * taken, and make it the cover when the recipe has none. Answers the picture's path.
+ */
+export const addPicture = async (cmd: Command, path: string, name: string, bytes: Uint8Array, mimetype: string): Promise<string> => {
+  const dir = `${path}/${PICTURES_DIR}`;
+  const dot = name.lastIndexOf('.');
+  const [stem, ext] = dot > 0 ? [name.slice(0, dot), name.slice(dot)] : [name, ''];
+  let free = name;
+  for (let n = 2; await cmd.sys.vfs.exists(cmd.access, `${dir}/${free}`, { follow: false }); n++) free = `${stem}-${n}${ext}`;
+  await cmd.sys.vfs.create(cmd.access, 'file', dir, free, { attrs: { mimetype }, props: { mode: 0o664 } });
+  const handle = await cmd.sys.vfs.open(cmd.access, `${dir}/${free}`, { mode: 'w' });
+  try {
+    await handle.write(bytes);
+  } finally {
+    await handle.close();
+  }
+  await coverRecipe(cmd, path);
+  return `${dir}/${free}`;
 };
 
 /** Say `error` on stderr as `name`'s failure, and answer the exit code for it. */
