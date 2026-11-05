@@ -1,7 +1,7 @@
 import { ActionIcon, Alert, Anchor, Badge, Box, Container, Grid, Group, Image, Paper, SimpleGrid, Stack, Text, Title, Tooltip, UnstyledButton } from '@mantine/core';
 import { EmptyState, EntityDetailHeader, PageLoader, TablerIcon } from '@ein/ui/components';
 import { forgetCover, useAccessIds, useCommand } from '@ein/ui/hooks';
-import { canWrite, fileUrl, shq, THUMB_NAME } from '@ein/ui/lib';
+import { canWrite, fileUrl, shq, thumbnailUrl } from '@ein/ui/lib';
 import { execCommand, notify, openDialog } from '@ein/ui/signals';
 import { type CSSProperties, type ReactNode, useState } from 'react';
 import { useParams } from 'react-router-dom';
@@ -113,7 +113,7 @@ function Pictures({ recipe, editable, onCover }: { recipe: Recipe; editable: boo
       {recipe.pictures.map((picture) => (
         <Box key={picture} pos='relative'>
           <Anchor href={fileUrl(picture)} target='_blank'>
-            <Image radius='sm' h={120} fit='cover' src={`${fileUrl(picture)}/thumbnails/${THUMB_NAME}`} fallbackSrc={fileUrl(picture)} alt='' />
+            <Image radius='sm' h={120} fit='cover' src={thumbnailUrl(picture, true)} fallbackSrc={fileUrl(picture)} alt='' />
           </Anchor>
           {editable && (
             <Tooltip label='Make this its cover'>
