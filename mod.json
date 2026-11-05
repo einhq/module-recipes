@@ -1,6 +1,6 @@
 {
   "name": "recipes",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Recipes: ingredients, steps and pictures, with the ingredients scaled to the servings wanted",
   "license": "Elastic-2.0, with an added permission (LICENSE)",
   "coreApi": "^0.11.0",
