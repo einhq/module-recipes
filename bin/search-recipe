@@ -3,9 +3,9 @@
  * search-recipe — find recipes by their title or description.
  *
  * Discovered by `search` like every other `search-*` on PATH. Its rows are in the `name` channel
- * (the title) and the `description` channel. The pictures are
- * left out of the library's views (`/archive/recipes` is unlisted), but the recipes themselves are
- * found here: it does not take `--not-within`.
+ * (the title) and the `description` channel. The pictures are left out of the library's views
+ * (`/archive/recipes` is unlisted), but the recipes themselves are found: it answers `--kinds` with
+ * `unlisted`, so `search` keeps its hits there.
  */
 import type { CmdReturn, Command } from '@ein/client';
 import type { SearchProviderHit, SearchProviderResponse } from '@ein/api';
@@ -22,7 +22,7 @@ const attrsOf = (row: { node: { attrs: unknown } }): RecipeAttrs => row.node.att
 
 const searchRecipe = async (cmd: Command): CmdReturn => {
   if (cmd.args.includes('--kinds')) {
-    await cmd.writeLn(JSON.stringify({ kinds: ['recipe'] }));
+    await cmd.writeLn(JSON.stringify({ kinds: ['recipe'], unlisted: true }));
     return 0;
   }
 

@@ -67,9 +67,11 @@ const steps = async (t: Deno.TestContext, connect: Connect) => {
       assertEquals(await anna.execJson<RecipeCategory[]>('recipe-categories'), [{ name: 'Dinner', count: 3 }, { name: 'Baking', count: 1 }, { name: 'Dessert', count: 1 }]);
     });
 
-    await t.step('search finds a recipe by its title', async () => {
+    await t.step('search finds a recipe by its title, in the unlisted root too', async () => {
       const found = await anna.execJson<SearchProviderResponse>('search-recipe soppa');
       assertEquals(found.results.map((hit) => [hit.path, hit.channel]), [['/archive/recipes/artsoppa', 'name']]);
+      const searched = await anna.execJson<{ results: { path: string }[] }>('search soppa');
+      assertEquals(searched.results.map((hit) => hit.path), ['/archive/recipes/artsoppa']);
     });
 
     await t.step('a picture put in its pictures becomes its cover', async () => {
