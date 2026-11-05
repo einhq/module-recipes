@@ -7,11 +7,12 @@
  * them, through the mode they are made with.
  *
  * `/archive/recipes` is unlisted, so the library's views (the photos, the timeline, search's feed)
- * leave the pictures out. The root is the administrator's, so the mark is set as the administrator,
- * the first time a recipe is written.
+ * leave the pictures out, and it wants only renditions of them (`processing`), so the pipelines
+ * that read faces, text or picture vectors pass them by. The root is the administrator's, so both
+ * are set as the administrator, the first time a recipe is written.
  */
 import { basename, resolve } from '@std/path';
-import { ADMIN_ACCESS, type Command, COVER_LINK_NAME, NodeNotFoundError, nodeOwnership, setCover, UNLISTED_ATTR } from '@ein/client';
+import { ADMIN_ACCESS, type Command, COVER_LINK_NAME, NodeNotFoundError, nodeOwnership, PROCESSING_ATTR, setCover, UNLISTED_ATTR } from '@ein/client';
 import type { Ingredient, Recipe, RecipeCard, RecipeCategory, RecipePage, RecipeStep } from './api.ts';
 
 export const RECIPES_ROOT = '/archive/recipes';
@@ -108,11 +109,15 @@ const attrsOf = (fields: RecipeFields): Record<string, unknown> => {
   return attrs;
 };
 
-/** Mark the root unlisted, once; see the file's comment. */
+/** The processing the root wants for the recipes' pictures: renditions, nothing else. */
+const ROOT_PROCESSING = ['renditions'];
+
+/** Mark the root unlisted and wanting only renditions, once; see the file's comment. */
 const markRoot = async (cmd: Command): Promise<void> => {
   const root = await cmd.sys.vfs.get(ADMIN_ACCESS, RECIPES_ROOT).catch(() => undefined);
   if (!root) throw new RecipeError(`${RECIPES_ROOT} is missing: run mod setup recipes`);
-  if (root.attrs[UNLISTED_ATTR] !== true) await cmd.sys.vfs.update(ADMIN_ACCESS, RECIPES_ROOT, { attrs: { [UNLISTED_ATTR]: true } });
+  if (root.attrs[UNLISTED_ATTR] === true && JSON.stringify(root.attrs[PROCESSING_ATTR]) === JSON.stringify(ROOT_PROCESSING)) return;
+  await cmd.sys.vfs.update(ADMIN_ACCESS, RECIPES_ROOT, { attrs: { [UNLISTED_ATTR]: true, [PROCESSING_ATTR]: ROOT_PROCESSING } });
 };
 
 const picturesOf = async (cmd: Command, path: string): Promise<string[]> => {

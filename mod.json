@@ -3,7 +3,7 @@
   "version": "0.1.1",
   "description": "Recipes: ingredients, steps and pictures, with the ingredients scaled to the servings wanted",
   "license": "Elastic-2.0, with an added permission (LICENSE)",
-  "coreApi": "^0.11.0",
+  "coreApi": "^0.11.2",
   "exports": {
     "./api": "./lib/api.ts",
     "./store": "./lib/store.ts",

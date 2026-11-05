@@ -36,9 +36,10 @@ const steps = async (t: Deno.TestContext, connect: Connect) => {
       assertEquals(cake.pictures, []);
     });
 
-    await t.step('the root is unlisted, so its pictures stay out of the library', async () => {
+    await t.step('the root is unlisted and wants only renditions, so its pictures stay out of the library and its analysis', async () => {
       const root = await admin.execJson<{ attrs: Record<string, unknown> }>('stat /archive/recipes');
       assertEquals(root.attrs.unlisted, true);
+      assertEquals(root.attrs.processing, ['renditions']);
     });
 
     await t.step('a second recipe of the same title gets a name of its own', async () => {
