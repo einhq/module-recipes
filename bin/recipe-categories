@@ -1,0 +1,28 @@
+#!ts
+/** recipe-categories — the categories recipes are in. */
+import type { CmdReturn, Command } from '@ein/client';
+import type { RecipeCategory } from '@recipes/api';
+import { fail, listCategories } from '@recipes/store';
+
+const recipeCategories = async (cmd: Command): CmdReturn => {
+  try {
+    const categories = await listCategories(cmd);
+    if (cmd.json) await cmd.writeJSON(categories satisfies RecipeCategory[]);
+    else for (const category of categories) await cmd.writeLn(`${String(category.count).padStart(5)}  ${category.name}`);
+    return 0;
+  } catch (error) {
+    return await fail(cmd, 'recipe-categories', error);
+  }
+};
+
+recipeCategories.spec = {
+  name: 'recipe-categories',
+  effect: 'read' as const,
+  description: 'List the categories recipes are in, with how many are in each',
+  args: [],
+  flags: [],
+  examples: ['recipe-categories'],
+  returns: 'One entry per category: name and count, the fullest first.',
+};
+
+export default recipeCategories;

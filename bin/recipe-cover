@@ -1,0 +1,33 @@
+#!ts
+/** recipe-cover — the picture a recipe is shown with. */
+import type { CmdReturn, Command } from '@ein/client';
+import type { Recipe } from '@recipes/api';
+import { coverRecipe, fail, readRecipe, RecipeError } from '@recipes/store';
+
+const recipeCover = async (cmd: Command): CmdReturn => {
+  try {
+    const recipe = await readRecipe(cmd, cmd.args[0]);
+    const picture = cmd.args[1] === undefined ? undefined : recipe.pictures.find((path) => path === cmd.args[1] || path.endsWith(`/${cmd.args[1]}`));
+    if (cmd.args[1] !== undefined && !picture) throw new RecipeError(`${cmd.args[1]}: not one of ${recipe.title}'s pictures`);
+    await coverRecipe(cmd, recipe.path, picture);
+    if (cmd.json) await cmd.writeJSON(recipe satisfies Recipe);
+    return 0;
+  } catch (error) {
+    return await fail(cmd, 'recipe-cover', error);
+  }
+};
+
+recipeCover.spec = {
+  name: 'recipe-cover',
+  effect: 'write' as const,
+  description: "Make one of a recipe's pictures the one it is shown with; with none named, its first, when it has no cover yet",
+  args: [
+    { name: 'recipe', type: 'path' as const, description: 'the recipe, by its path or its name in /archive/recipes' },
+    { name: 'picture', type: 'path' as const, description: 'one of its pictures, by its path or its name' },
+  ],
+  flags: [],
+  examples: ['recipe-cover apple-cake', 'recipe-cover apple-cake baked.jpg'],
+  returns: 'The recipe.',
+};
+
+export default recipeCover;

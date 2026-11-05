@@ -1,0 +1,34 @@
+#!ts
+/** recipe-set — change what a recipe says. */
+import type { CmdReturn, Command } from '@ein/client';
+import { collectUnknownFlags, parseArgs, reportUnknownFlags } from '@ein/client';
+import type { Recipe } from '@recipes/api';
+import { FIELD_FLAGS, FIELD_SPECS, fieldsOf } from '@recipes/flags';
+import { fail, readRecipe, updateRecipe } from '@recipes/store';
+
+const recipeSet = async (cmd: Command): CmdReturn => {
+  const unknown: string[] = [];
+  const flags = parseArgs(cmd.args, { string: FIELD_FLAGS, unknown: collectUnknownFlags(unknown) });
+  if (await reportUnknownFlags(cmd, unknown)) return 1;
+  try {
+    const recipe = await readRecipe(cmd, flags._[0] === undefined ? undefined : String(flags._[0]));
+    const changed = await updateRecipe(cmd, recipe.path, fieldsOf(flags));
+    if (cmd.json) await cmd.writeJSON(changed satisfies Recipe);
+    else await cmd.writeLn(changed.path);
+    return 0;
+  } catch (error) {
+    return await fail(cmd, 'recipe-set', error);
+  }
+};
+
+recipeSet.spec = {
+  name: 'recipe-set',
+  effect: 'write' as const,
+  description: 'Change what a recipe says; a field given empty is taken away',
+  args: [{ name: 'recipe', type: 'path' as const, description: 'the recipe, by its path or its name in /archive/recipes' }],
+  flags: [{ name: 'title', type: 'string' as const, description: 'its new title' }, ...FIELD_SPECS],
+  examples: ['recipe-set apple-cake --serves 6 --rating 5', "recipe-set apple-cake --description ''"],
+  returns: 'The recipe as it is now.',
+};
+
+export default recipeSet;

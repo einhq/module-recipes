@@ -1,0 +1,44 @@
+#!ts
+/** recipe-list — a page of recipes, by title or the newest first. */
+import type { CmdReturn, Command } from '@ein/client';
+import { collectUnknownFlags, parseArgs, reportUnknownFlags } from '@ein/client';
+import type { RecipePage } from '@recipes/api';
+import { fail, listRecipes, RecipeError } from '@recipes/store';
+
+const recipeList = async (cmd: Command): CmdReturn => {
+  const unknown: string[] = [];
+  const flags = parseArgs(cmd.args, { string: ['category', 'sort', 'after', 'limit'], unknown: collectUnknownFlags(unknown) });
+  if (await reportUnknownFlags(cmd, unknown)) return 1;
+  try {
+    const sort = flags.sort ?? 'title';
+    if (sort !== 'title' && sort !== 'newest') throw new RecipeError(`--sort is title or newest, got '${sort}'`);
+    const limit = flags.limit === undefined ? 48 : Number(flags.limit);
+    if (!Number.isInteger(limit) || limit < 1 || limit > 500) throw new RecipeError(`--limit must be a whole number from 1 to 500, got '${flags.limit}'`);
+    const page = await listRecipes(cmd, { category: flags.category || undefined, text: flags._.map(String).join(' '), sort, after: flags.after || undefined, limit });
+    if (cmd.json) await cmd.writeJSON(page satisfies RecipePage);
+    else {
+      for (const recipe of page.recipes) await cmd.writeLn(`${recipe.title}${recipe.serves ? `  (serves ${recipe.serves})` : ''}  ${recipe.path}`);
+      if (page.next) await cmd.writeLn(`more: recipe-list --after ${page.next}`);
+    }
+    return 0;
+  } catch (error) {
+    return await fail(cmd, 'recipe-list', error);
+  }
+};
+
+recipeList.spec = {
+  name: 'recipe-list',
+  effect: 'read' as const,
+  description: 'List the recipes, by title or the newest first, in a category or with words in their title',
+  args: [{ name: 'text', type: 'string' as const, description: 'words the title holds' }],
+  flags: [
+    { name: 'category', type: 'string' as const, description: 'only the recipes in this category' },
+    { name: 'sort', type: 'string' as const, description: 'title (the default) or newest' },
+    { name: 'limit', type: 'number' as const, description: 'how many to list, 48 unless said' },
+    { name: 'after', type: 'string' as const, description: 'the next page, as the previous page answered it' },
+  ],
+  examples: ['recipe-list', 'recipe-list --category Baking', 'recipe-list cake --sort newest'],
+  returns: 'recipes (path, title, description, serves, totalMinutes, difficulty, rating, categories, lang, site), and next when there are more.',
+};
+
+export default recipeList;

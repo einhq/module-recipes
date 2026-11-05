@@ -1,0 +1,17 @@
+{
+  "sidebar": [
+    { "id": "recipes.list", "section": "main", "label": "Recipes", "icon": "chef-hat", "to": "/recipes", "order": 36, "signedIn": true }
+  ],
+  "topbar": [
+    {
+      "id": "recipes.new",
+      "parent": "ui.create",
+      "title": "Recipe",
+      "icon": "chef-hat",
+      "color": "orange",
+      "action": { "dialog": "/recipes/new" },
+      "order": 31,
+      "signedIn": true
+    }
+  ]
+}

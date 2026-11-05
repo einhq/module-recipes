@@ -1,0 +1,79 @@
+#!ts
+/**
+ * search-recipe — find recipes by their title or description.
+ *
+ * Discovered by `search` like every other `search-*` on PATH. Its rows are in the `name` channel
+ * (the title) and the `description` channel. The pictures are
+ * left out of the library's views (`/archive/recipes` is unlisted), but the recipes themselves are
+ * found here: it does not take `--not-within`.
+ */
+import type { CmdReturn, Command } from '@ein/client';
+import type { SearchProviderHit, SearchProviderResponse } from '@ein/api';
+import { RECIPE_TYPE, type RecipeAttrs, RECIPES_ROOT } from '@recipes/store';
+
+/** How well `value` holds `query`: the whole of it, its start, or somewhere in it. */
+const scoreOf = (query: string, value: string | undefined): number => {
+  const folded = value?.toLowerCase() ?? '';
+  if (!folded.includes(query)) return 0;
+  return folded === query ? 1 : folded.startsWith(query) ? 0.9 : 0.7;
+};
+
+const attrsOf = (row: { node: { attrs: unknown } }): RecipeAttrs => row.node.attrs as RecipeAttrs;
+
+const searchRecipe = async (cmd: Command): CmdReturn => {
+  if (cmd.args.includes('--kinds')) {
+    await cmd.writeLn(JSON.stringify({ kinds: ['recipe'] }));
+    return 0;
+  }
+
+  const queryParts: string[] = [];
+  let limit = 10;
+  for (let i = 0; i < cmd.args.length; i++) {
+    if (cmd.args[i] === '-l' || cmd.args[i] === '--limit') limit = parseInt(cmd.args[++i] || '10', 10);
+    else queryParts.push(cmd.args[i]);
+  }
+  const query = queryParts.join(' ').trim().toLowerCase();
+  if (!query) {
+    await cmd.writeError('search-recipe: missing search query\n');
+    return 1;
+  }
+
+  const ask = (ref: string) =>
+    cmd.sys.vfs.query(cmd.access, { types: [RECIPE_TYPE], within: RECIPES_ROOT, where: [{ ref, op: 'contains', value: query }], limit: limit + 1 }).catch(() => []);
+  const [byTitle, byDescription] = await Promise.all([ask('title'), ask('description')]);
+
+  const hitOf = (row: (typeof byTitle)[number], channel: 'name' | 'description', score: number): SearchProviderHit => ({
+    path: row.absPath,
+    type: RECIPE_TYPE,
+    name: attrsOf(row).title ?? row.absPath.split('/').pop()!,
+    ...(attrsOf(row).description ? { description: attrsOf(row).description } : {}),
+    channel,
+    score,
+  });
+  const named = byTitle.map((row) => hitOf(row, 'name', scoreOf(query, attrsOf(row).title)));
+  const described = byDescription.map((row) => hitOf(row, 'description', scoreOf(query, attrsOf(row).description)));
+
+  const best = (hits: SearchProviderHit[]) => hits.sort((a, b) => b.score - a.score || a.path.localeCompare(b.path)).slice(0, limit);
+  const results = [...best(named), ...best(described)];
+  const truncated = named.length > limit || described.length > limit;
+
+  if (cmd.json) await cmd.writeJSON({ results, ...(truncated ? { truncated } : {}) } satisfies SearchProviderResponse);
+  else if (results.length === 0) await cmd.writeLn('No matches found.');
+  else for (const hit of results) await cmd.writeLn(`${(hit.score * 100).toFixed(1)}% ${hit.channel.padEnd(11)} ${hit.path}`);
+  return 0;
+};
+
+searchRecipe.spec = {
+  name: 'search-recipe',
+  effect: 'read' as const,
+  description: 'Search recipes by title or description',
+  args: [{ name: 'query', type: 'string' as const, description: 'Search query text' }],
+  flags: [
+    { name: 'kinds', type: 'bool' as const, description: 'print the content kinds this provider can return, and exit' },
+    { name: 'l', type: 'number' as const, description: 'Max results per channel (default 10)' },
+  ],
+  examples: ["search-recipe 'apple cake'"],
+  returns: 'matching recipes, one row per channel that found it (name, description), best first within each.',
+};
+
+export default searchRecipe;

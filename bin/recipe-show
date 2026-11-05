@@ -1,0 +1,50 @@
+#!ts
+/** recipe-show — a recipe, whole. */
+import type { CmdReturn, Command } from '@ein/client';
+import type { Recipe } from '@recipes/api';
+import { sectionsOf } from '@recipes/ingredients';
+import { fail, readRecipe } from '@recipes/store';
+
+/** The recipe as text: its title and facts, then its ingredients and steps under their sections. */
+const recipeText = (recipe: Recipe): string[] => {
+  const facts = [
+    recipe.serves ? `serves ${recipe.serves}` : '',
+    recipe.totalMinutes ? `${recipe.totalMinutes} min` : '',
+    recipe.categories.join(', '),
+    recipe.source ?? '',
+  ].filter(Boolean);
+  const lines = [recipe.title, ...(facts.length ? [facts.join(' · ')] : []), ...(recipe.description ? ['', recipe.description] : [])];
+  for (const [heading, sections] of [['Ingredients', sectionsOf(recipe.ingredients)], ['Steps', sectionsOf(recipe.steps)]] as const) {
+    if (!sections.length) continue;
+    lines.push('', heading);
+    let n = 0;
+    for (const section of sections) {
+      if (section.group) lines.push(`  ${section.group}`);
+      for (const item of section.items) lines.push('raw' in item ? `  - ${item.raw}` : `  ${++n}. ${item.text}`);
+    }
+  }
+  return lines;
+};
+
+const recipeShow = async (cmd: Command): CmdReturn => {
+  try {
+    const recipe = await readRecipe(cmd, cmd.args[0]);
+    if (cmd.json) await cmd.writeJSON(recipe satisfies Recipe);
+    else for (const line of recipeText(recipe)) await cmd.writeLn(line);
+    return 0;
+  } catch (error) {
+    return await fail(cmd, 'recipe-show', error);
+  }
+};
+
+recipeShow.spec = {
+  name: 'recipe-show',
+  effect: 'read' as const,
+  description: 'Show a recipe: its facts, ingredients and steps',
+  args: [{ name: 'recipe', type: 'path' as const, description: 'the recipe, by its path or its name in /archive/recipes' }],
+  flags: [],
+  examples: ['recipe-show apple-cake'],
+  returns: 'The recipe: path, title, description, serves, totalMinutes, difficulty, rating, categories, lang, site, source, allergyInfo, ingredients, steps and pictures.',
+};
+
+export default recipeShow;

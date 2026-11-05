@@ -1,0 +1,35 @@
+#!ts
+/** recipe-create — a recipe in /archive/recipes. */
+import type { CmdReturn, Command } from '@ein/client';
+import { collectUnknownFlags, parseArgs, reportUnknownFlags } from '@ein/client';
+import type { Recipe } from '@recipes/api';
+import { FIELD_FLAGS, FIELD_SPECS, fieldsOf } from '@recipes/flags';
+import { createRecipe, fail } from '@recipes/store';
+
+const recipeCreate = async (cmd: Command): CmdReturn => {
+  const unknown: string[] = [];
+  const flags = parseArgs(cmd.args, { string: FIELD_FLAGS.filter((flag) => flag !== 'title'), unknown: collectUnknownFlags(unknown) });
+  if (await reportUnknownFlags(cmd, unknown)) return 1;
+  try {
+    const recipe = await createRecipe(cmd, { ...fieldsOf(flags), title: flags._.map(String).join(' ') });
+    if (cmd.json) await cmd.writeJSON(recipe satisfies Recipe);
+    else await cmd.writeLn(recipe.path);
+    return 0;
+  } catch (error) {
+    return await fail(cmd, 'recipe-create', error);
+  }
+};
+
+recipeCreate.spec = {
+  name: 'recipe-create',
+  effect: 'write' as const,
+  description: 'Add a recipe: its title, and its ingredients, steps and the rest if you like',
+  args: [{ name: 'title', type: 'string' as const, description: 'what the dish is called' }],
+  flags: FIELD_SPECS,
+  examples: [
+    "recipe-create 'Apple cake' --serves 8 --categories 'Baking, Dessert' --ingredients $'4 apples\\n2 dl sugar\\n100 g butter' --steps $'Slice the apples.\\nBake for 40 minutes.'",
+  ],
+  returns: 'The new recipe: path, title, its facts, ingredients, steps and pictures.',
+};
+
+export default recipeCreate;
