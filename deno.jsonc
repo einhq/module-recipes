@@ -25,6 +25,7 @@
     "@media/probe": "../media/lib/probe.ts",
     "@media/rendition-marker": "../media/lib/rendition-marker.ts",
     "@media/storyboard": "../media/lib/storyboard.ts",
+    "@media/transcript": "../media/lib/transcript.ts",
     "@media/vtt": "../media/lib/vtt.ts",
     "@media/waiting": "../media/lib/waiting.ts",
     "@media/writable": "../media/lib/writable.ts",
