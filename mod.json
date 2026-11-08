@@ -1,6 +1,6 @@
 {
   "name": "recipes",
-  "version": "0.3.2",
+  "version": "0.4.0",
   "description": "Recipes: ingredients, steps and pictures, with the ingredients scaled to the servings wanted",
   "license": "MIT",
   "coreApi": "^0.13.0",
