@@ -19,7 +19,10 @@ export const RECIPES_ROOT = '/archive/recipes';
 export const RECIPE_TYPE = 'recipe';
 const PICTURES_DIR = 'pictures';
 
-/** Readable by everyone signed in, writable by the `users` group the root belongs to. */
+/**
+ * Readable by everyone signed in, writable by the `users` group the root belongs to. A picture has
+ * it too: its renditions are under it, and reaching them takes execute on the picture.
+ */
 const SHARED_MODE = 0o775;
 
 /** The attrs of a `recipe` node. */
@@ -248,7 +251,7 @@ export const addPicture = async (cmd: Command, path: string, name: string, bytes
   const [stem, ext] = dot > 0 ? [name.slice(0, dot), name.slice(dot)] : [name, ''];
   let free = name;
   for (let n = 2; await cmd.sys.vfs.exists(cmd.access, `${dir}/${free}`, { follow: false }); n++) free = `${stem}-${n}${ext}`;
-  await cmd.sys.vfs.create(cmd.access, 'file', dir, free, { attrs: { mimetype }, props: { mode: 0o664 } });
+  await cmd.sys.vfs.create(cmd.access, 'file', dir, free, { attrs: { mimetype }, props: { mode: SHARED_MODE } });
   const handle = await cmd.sys.vfs.open(cmd.access, `${dir}/${free}`, { mode: 'w' });
   try {
     await handle.write(bytes);
