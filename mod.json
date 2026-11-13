@@ -3,9 +3,9 @@
   "version": "0.5.0",
   "description": "Recipes: ingredients, steps and pictures, with the ingredients scaled to the servings wanted",
   "license": "MIT",
-  "coreApi": "^0.14.0",
+  "coreApi": "^0.15.0",
   "dependencies": {
-    "media": "^0.3.0"
+    "media": "^0.4.0"
   },
   "exports": {
     "./api": "./lib/api.ts",
